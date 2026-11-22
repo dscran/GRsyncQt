@@ -109,6 +109,35 @@ is `""`, `orientation` is 0 and `aspectRatio` is `4:3` [05-info-MOV.json].
 - Every image and file response sends `Cache-Control: no-store, no-cache`
   [03-thumb-JPG.http.json], so any caching is up to the app.
 
+### No preview larger than 720×480
+
+A second probe, `spike/probe_preview_sizes.py`, ran on the same GR III on
+2026-11-22 against `113RICOH/R0006483.JPG`. It tried 23 GET requests for a
+larger preview [`spike/out/20261122-200738-preview-sizes/results.json`]:
+
+- Only `?size=thumb` (160×120) and `?size=view` (720×480, 55 KB) return
+  preview images. Extra parameters (`reso`, `resolution`, `res`, `width`
+  with `1080x720` or `1080`) are ignored: the answer is the same 720×480
+  `view` image.
+- Other `size` values (`xs`, `s`, `m`, `l`, `xl`, `large`, `hd`, `fullhd`,
+  `preview`, `1080`, `1080x720`, `720x480`) answer 200 with a 51-byte JSON
+  body instead of an image (the probe didn't save the body).
+- `?size=full`, and a query without `size` (`?reso=1080x720`), return the
+  full file (Content-Length 10285531).
+- The path suffixes `/view` and `/preview` answer 404.
+
+So `resoList` doesn't apply to stored photos (it's probably the live view's
+resolutions). The largest preview is 720×480; anything sharper means
+downloading the full file.
+
+### Exposure fields in `/info`
+
+`av` is the f-number, `sv` the ISO (`auto` for videos), `xv` the exposure
+compensation in EV, and `tv` the shutter speed as `numerator.denominator`
+seconds: `"1.4"` for R0006483 matches its EXIF ExposureTime of 1/4 s
+[05-info-JPG.json], [10-download-DNG.dng]. Videos report `av` `0.0`,
+`tv` `0.0`, `sv` `auto` and `xv` `0.0` [05-info-MOV.json].
+
 ## File size without downloading (duplicate detection)
 
 | Source | Works? | Evidence |
@@ -171,7 +200,7 @@ the app only needs a size for files whose name already exists locally.
 ## GR IIIx
 
 Not tested. It is assumed to behave the same, and to report
-`model: "RICOH GR IIIx"`, the string `GRsync.py` lists in `SUPPORT_DEVICE`.
+`model: "RICOH GR IIIx"`, the string the former `GRsync.py` script listed in `SUPPORT_DEVICE`.
 To confirm, re-run `spike/probe_camera.py` on a IIIx unchanged.
 
 ## For the app
@@ -211,8 +240,6 @@ To confirm, re-run `spike/probe_camera.py` on a IIIx unchanged.
 ### Still open
 
 - **GR IIIx:** untested (see above).
-- **Larger previews:** props lists `resoList: ["720x480", "1080x720"]`. Whether
-  a 1080×720 preview can be requested, and how, wasn't probed.
 - **Long sessions:** the run lasted 15 s. It's unknown how the camera's Wi-Fi
   and auto power-off behave over a download lasting minutes or hours.
 - **Large cards:** listing time was measured at 1243 files only.

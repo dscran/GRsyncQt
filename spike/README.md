@@ -85,3 +85,19 @@ The switches `--no-head`, `--no-range`, `--no-mov`, `--slow` and
 `--fail <path-substring>` make the fake misbehave, to exercise the script's
 fail and skip paths. The fake proves only that the script works, not anything
 about the camera.
+
+## Preview-size probe
+
+`probe_preview_sizes.py` checks whether the camera serves a preview larger
+than 720×480 (its props list `resoList: ["720x480", "1080x720"]`). It sends
+only GET requests for one JPG (the newest, or `--file DIR/NAME.JPG`), tries
+candidate query parameters, and prints status, bytes and pixel size per
+candidate. It never fetches the camera props. Responses as large as the full
+file are closed after their headers.
+
+```bash
+python spike/probe_preview_sizes.py            # on the camera's Wi-Fi
+python spike/probe_preview_sizes.py --host http://127.0.0.1:8080/   # fake camera
+```
+
+Results go to `spike/out/<timestamp>-preview-sizes/` (gitignored).
